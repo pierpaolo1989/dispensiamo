@@ -1,41 +1,74 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:path/path.dart' as path;
+import 'package:sqflite/sqflite.dart';
 
-class FirebaseService {
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static final _collection = _firestore.collection('products');
+class DatabaseService {
+  static const _databaseName = 'dispensiamo.db';
+  static const _databaseVersion = 1;
+  static const _tableName = 'products';
+  static Future<Database>? _database;
+
+  static Future<Database> get _db => _database ??= _openDatabase();
+
+  static Future<Database> _openDatabase() async {
+    final databasePath = path.join(
+      await getDatabasesPath(),
+      _databaseName,
+    );
+    return openDatabase(
+      databasePath,
+      version: _databaseVersion,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE $_tableName (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            price REAL NOT NULL
+          )
+        ''');
+      },
+    );
+  }
 
   static Future<void> saveProducts(List<Map<String, dynamic>> products) async {
-    final batch = _firestore.batch();
+    final db = await _db;
+    await db.transaction((transaction) async {
+      for (final product in products) {
+        final name = product['name'];
+        final price = product['price'];
+        if (name is! String ||
+            name.trim().isEmpty ||
+            price is! num ||
+            !price.isFinite) {
+          throw ArgumentError(
+              'Ogni prodotto deve avere nome e prezzo numerico.');
+        }
 
-    for (var product in products) {
-      final docRef = _collection.doc();
-      batch.set(docRef, {
-        'name': product['name'],
-        'price': product['price'],
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
-
-    await batch.commit();
+        await transaction.insert(_tableName, {
+          'name': name.trim(),
+          'price': price,
+        });
+      }
+    });
   }
 
   static Future<List<Map<String, dynamic>>> getPaginatedProducts(
       String? lastDocId) async {
-    Query query = _collection.orderBy('createdAt').limit(10);
+    final db = await _db;
+    final lastId = lastDocId == null ? null : int.parse(lastDocId);
+    final rows = await db.query(
+      _tableName,
+      columns: ['id', 'name', 'price'],
+      where: lastId == null ? null : 'id > ?',
+      whereArgs: lastId == null ? null : [lastId],
+      orderBy: 'id ASC',
+      limit: 10,
+    );
 
-    if (lastDocId != null) {
-      final lastDoc = await _collection.doc(lastDocId).get();
-      query = query.startAfterDocument(lastDoc);
-    }
-
-    final snapshot = await query.get();
-    return snapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return {
-        'id': doc.id,
-        'name': data["name"],
-        'price': data['price'],
-      };
-    }).toList();
+    return rows
+        .map((row) => {
+              ...row,
+              'id': row['id'].toString(),
+            })
+        .toList();
   }
 }

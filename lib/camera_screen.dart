@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:dispensiamo/theme/app_theme.dart';
 import 'result_screen.dart';
 
 class CameraScreen extends StatefulWidget {
+  const CameraScreen({super.key});
+
   @override
-  _CameraScreenState createState() => _CameraScreenState();
+  State<CameraScreen> createState() => _CameraScreenState();
 }
 
 class _CameraScreenState extends State<CameraScreen> {
@@ -32,33 +35,78 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Fotocamera')),
-      body: FutureBuilder<void>(
-        future: _initializeControllerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            return CameraPreview(_controller);
-          } else {
-            return Center(child: CircularProgressIndicator());
-          }
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          try {
-            await _initializeControllerFuture;
-            final image = await _controller.takePicture();
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ResultScreen(imagePath: image.path),
+      appBar: AppBar(title: const Text('Fotocamera')),
+      backgroundColor: AppColors.black,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          FutureBuilder<void>(
+            future: _initializeControllerFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.done) {
+                return CameraPreview(_controller);
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Impossibile avviare la fotocamera',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyLarge
+                        ?.copyWith(color: AppColors.white),
+                  ),
+                );
+              }
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.acidGreen),
+              );
+            },
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 28,
+            child: Center(
+              child: GestureDetector(
+                onTap: () async {
+                  try {
+                    await _initializeControllerFuture;
+                    final image = await _controller.takePicture();
+                    if (!context.mounted) return;
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ResultScreen(imagePath: image.path),
+                      ),
+                    );
+                  } catch (error) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Scatto non riuscito: $error'),
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.white, width: 4),
+                    color: AppColors.acidGreen,
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt_rounded,
+                    color: AppColors.black,
+                    size: 30,
+                  ),
+                ),
               ),
-            );
-          } catch (e) {
-            print(e);
-          }
-        },
-        child: Icon(Icons.camera),
+            ),
+          ),
+        ],
       ),
     );
   }

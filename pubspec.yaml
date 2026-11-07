@@ -12,8 +12,8 @@ dependencies:
   camera: ^0.10.0
   google_ml_kit: ^0.7.0
   permission_handler: ^11.0.0
-  firebase_core: ^1.0.0
-  cloud_firestore: ^2.0.0
+  sqflite: ^2.4.5
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
