@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:dispensiamo/theme/app_theme.dart';
+import 'package:dispensiamo/l10n/app_strings.dart';
 import 'result_screen.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -34,8 +35,9 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Fotocamera')),
+      appBar: AppBar(title: Text(strings.camera)),
       backgroundColor: AppColors.black,
       body: Stack(
         fit: StackFit.expand,
@@ -49,7 +51,7 @@ class _CameraScreenState extends State<CameraScreen> {
               if (snapshot.hasError) {
                 return Center(
                   child: Text(
-                    'Impossibile avviare la fotocamera',
+                    strings.cameraUnavailable,
                     style: Theme.of(context)
                         .textTheme
                         .bodyLarge
@@ -84,7 +86,7 @@ class _CameraScreenState extends State<CameraScreen> {
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Scatto non riuscito: $error'),
+                        content: Text(strings.cameraError(error)),
                       ),
                     );
                   }

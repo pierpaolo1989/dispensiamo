@@ -1,4 +1,5 @@
 import 'package:dispensiamo/camera_screen.dart';
+import 'package:dispensiamo/l10n/app_strings.dart';
 import 'package:dispensiamo/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -7,29 +8,18 @@ class MainCameraScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.acidGreen,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Icon(
-                  Icons.receipt_long_rounded,
-                  size: 30,
-                  color: AppColors.black,
-                ),
-              ),
               const Spacer(),
-              const Text(
-                'La tua spesa,\\nsempre sotto controllo.',
-                style: TextStyle(
+              Text(
+                strings.homeHeadline,
+                style: const TextStyle(
                   fontSize: 36,
                   height: 1.05,
                   fontWeight: FontWeight.w800,
@@ -38,9 +28,9 @@ class MainCameraScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Scansiona uno scontrino o aggiungi i prodotti alla tua dispensa.',
-                style: TextStyle(
+              Text(
+                strings.homeDescription,
+                style: const TextStyle(
                   color: AppColors.muted,
                   fontSize: 16,
                   height: 1.45,
@@ -59,7 +49,7 @@ class MainCameraScreen extends StatelessWidget {
                     );
                   },
                   icon: const Icon(Icons.camera_alt_rounded),
-                  label: const Text('Scatta una foto'),
+                  label: Text(strings.takePhoto),
                 ),
               ),
               const SizedBox(height: 12),
@@ -78,7 +68,7 @@ class MainCameraScreen extends StatelessWidget {
                     ),
                   ),
                   icon: const Icon(Icons.photo_library_outlined),
-                  label: const Text('Seleziona dalla galleria'),
+                  label: Text(strings.chooseFromGallery),
                 ),
               ),
               const Spacer(),

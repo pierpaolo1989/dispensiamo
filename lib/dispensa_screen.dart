@@ -1,4 +1,9 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:dispensiamo/l10n/app_strings.dart';
+import 'package:dispensiamo/service/app_settings.dart';
 import 'package:dispensiamo/service/database_service.dart';
+import 'package:dispensiamo/service/notification_service.dart';
 import 'package:dispensiamo/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -21,14 +26,17 @@ class _DispensaScreenState extends State<DispensaScreen> {
     super.initState();
     _fetchProducts();
 
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent &&
-          !_isLoading &&
-          _hasMore) {
-        _fetchProducts();
-      }
-    });
+    _scrollController.addListener(_loadNextPageWhenNeeded);
+  }
+
+  void _loadNextPageWhenNeeded() {
+    if (!_scrollController.hasClients ||
+        _isLoading ||
+        !_hasMore ||
+        _scrollController.position.extentAfter > 300) {
+      return;
+    }
+    _fetchProducts();
   }
 
   @override
@@ -52,13 +60,14 @@ class _DispensaScreenState extends State<DispensaScreen> {
       setState(() {
         _products.addAll(newProducts);
         _isLoading = false;
-        _hasMore = newProducts.length == 10;
+        _hasMore = newProducts.length == DatabaseService.productsPageSize;
       });
     } catch (error) {
       if (!mounted) return;
+      final strings = AppStrings.of(context);
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Impossibile caricare i prodotti: $error';
+        _errorMessage = strings.loadProductsError(error);
       });
       if (_products.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -68,89 +77,238 @@ class _DispensaScreenState extends State<DispensaScreen> {
     }
   }
 
-  Future<void> _addProduct() async {
+  Future<void> _showProductForm({Map<String, dynamic>? existingProduct}) async {
+    final strings = AppStrings.of(context);
     final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController();
-    final priceController = TextEditingController();
+    var name = existingProduct?['name'] as String? ?? '';
+    var priceValue = existingProduct == null
+        ? ''
+        : (existingProduct['price'] as num).toString();
+    final savedDate = existingProduct?['expiration_date'] as String?;
+    DateTime? expirationDate =
+        savedDate == null ? null : DateTime.parse(savedDate);
+    int? alertDays = existingProduct?['alert_days'] as int?;
 
     final product = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Aggiungi prodotto'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: nameController,
-                autofocus: true,
-                decoration: const InputDecoration(labelText: 'Nome'),
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Inserisci un nome'
-                    : null,
-              ),
-              TextFormField(
-                controller: priceController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Prezzo'),
-                validator: (value) {
-                  final price = double.tryParse(
-                    (value ?? '').trim().replaceAll(',', '.'),
-                  );
-                  return price == null || !price.isFinite || price < 0
-                      ? 'Inserisci un prezzo valido'
-                      : null;
-                },
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            existingProduct == null ? strings.addProduct : strings.editProduct,
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annulla'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (!formKey.currentState!.validate()) return;
-              Navigator.pop(context, {
-                'name': nameController.text.trim(),
-                'price': double.parse(
-                  priceController.text.trim().replaceAll(',', '.'),
+          content: SizedBox(
+            width: 420,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      initialValue: name,
+                      autofocus: true,
+                      decoration: InputDecoration(labelText: strings.name),
+                      onSaved: (value) => name = value?.trim() ?? '',
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                              ? strings.enterName
+                              : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: priceValue,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        TextInputFormatter.withFunction((oldValue, newValue) {
+                          return RegExp(r'^\d*\.?\d*$').hasMatch(newValue.text)
+                              ? newValue
+                              : oldValue;
+                        }),
+                      ],
+                      decoration: InputDecoration(labelText: strings.price),
+                      onSaved: (value) => priceValue = value?.trim() ?? '',
+                      validator: (value) {
+                        final price = double.tryParse((value ?? '').trim());
+                        return price == null || !price.isFinite || price < 0
+                            ? strings.enterValidPrice
+                            : null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(strings.expirationDate),
+                      subtitle: Text(
+                        expirationDate == null
+                            ? strings.chooseExpirationDate
+                            : _formatDate(context, expirationDate!),
+                      ),
+                      trailing: const Icon(Icons.calendar_month_outlined),
+                      onTap: () async {
+                        final pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: expirationDate ?? DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (pickedDate != null) {
+                          setDialogState(() {
+                            expirationDate = pickedDate;
+                          });
+                        }
+                      },
+                    ),
+                    if (expirationDate != null)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            setDialogState(() {
+                              expirationDate = null;
+                            });
+                          },
+                          child: Text(strings.clearExpirationDate),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      initialValue: alertDays ?? -1,
+                      decoration: InputDecoration(labelText: strings.reminder),
+                      items: [
+                        DropdownMenuItem<int>(
+                          value: -1,
+                          child: Text(
+                            '${strings.defaultReminder} '
+                            '(${_alertLabel(strings, AppSettings.instance.defaultExpirationAlertDays)})',
+                          ),
+                        ),
+                        DropdownMenuItem<int>(
+                          value: 0,
+                          child: Text(strings.noReminder),
+                        ),
+                        for (final days in [1, 2, 3, 7, 14])
+                          DropdownMenuItem<int>(
+                            value: days,
+                            child: Text(strings.defaultAlertDays(days)),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() {
+                          alertDays = value == -1 ? null : value;
+                        });
+                      },
+                    ),
+                    if (expirationDate == null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            strings.expirationDateRequiredForReminder,
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              });
-            },
-            child: const Text('Salva'),
+              ),
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(strings.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (!formKey.currentState!.validate()) return;
+                formKey.currentState!.save();
+                Navigator.pop(context, {
+                  'name': name,
+                  'price': double.parse(priceValue),
+                  'expiration_date': expirationDate == null
+                      ? null
+                      : _dateForStorage(expirationDate!),
+                  'alert_days': alertDays,
+                });
+              },
+              child: Text(strings.save),
+            ),
+          ],
+        ),
       ),
     );
-    nameController.dispose();
-    priceController.dispose();
-
-    if (product == null) return;
+    if (product == null || !mounted) return;
+    final productId = existingProduct?['id'] as String?;
+    late final int savedProductId;
     try {
-      await DatabaseService.saveProducts([product]);
-      if (!mounted) return;
-      setState(() {
-        _products.clear();
-        _hasMore = true;
-      });
-      await _fetchProducts();
+      if (productId == null) {
+        savedProductId = await DatabaseService.saveProduct(product);
+      } else {
+        await DatabaseService.updateProduct(productId, product);
+        savedProductId = int.parse(productId);
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossibile salvare il prodotto: $error')),
+        SnackBar(content: Text(strings.saveProductError(error))),
+      );
+      return;
+    }
+
+    try {
+      final permissionGranted =
+          await NotificationService.instance.scheduleProductReminder(
+        productId: savedProductId,
+        productName: product['name'] as String,
+        expirationDate: product['expiration_date'] as String?,
+        alertDays: product['alert_days'] as int?,
+      );
+      if (!permissionGranted && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              kIsWeb
+                  ? strings.notificationsUnavailable
+                  : strings.notificationsDenied,
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.saveProductReminderError(error))),
       );
     }
+
+    if (!mounted) return;
+    setState(() {
+      _products.clear();
+      _hasMore = true;
+    });
+    await _fetchProducts();
   }
+
+  static String _dateForStorage(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  static String _formatDate(BuildContext context, DateTime date) =>
+      MaterialLocalizations.of(context).formatMediumDate(date);
+
+  static String _alertLabel(AppStrings strings, int days) =>
+      days == 0 ? strings.noReminder : strings.defaultAlertDays(days);
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Dispensa')),
       body: _errorMessage != null && _products.isEmpty
           ? Center(
               child: Column(
@@ -160,7 +318,7 @@ class _DispensaScreenState extends State<DispensaScreen> {
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: _fetchProducts,
-                    child: const Text('Riprova'),
+                    child: Text(strings.retry),
                   ),
                 ],
               ),
@@ -168,7 +326,7 @@ class _DispensaScreenState extends State<DispensaScreen> {
           : _products.isEmpty && _isLoading
               ? const Center(child: CircularProgressIndicator())
               : _products.isEmpty
-                  ? const Center(child: Text('Nessun prodotto salvato'))
+                  ? Center(child: Text(strings.noProducts))
                   : ListView.builder(
                       controller: _scrollController,
                       itemCount:
@@ -180,58 +338,156 @@ class _DispensaScreenState extends State<DispensaScreen> {
                                 ? const CircularProgressIndicator()
                                 : TextButton(
                                     onPressed: _fetchProducts,
-                                    child: const Text('Carica altri'),
+                                    child: Text(strings.loadMore),
                                   ),
                           );
                         }
                         final product = _products[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 5,
-                          ),
-                          color: const Color(0xFFF8F8F5),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
+                        final expirationDate =
+                            product['expiration_date'] as String?;
+                        final productId = product['id'] as String;
+                        return Dismissible(
+                          key: ValueKey(productId),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            margin: const EdgeInsets.symmetric(
                               horizontal: 16,
-                              vertical: 6,
+                              vertical: 5,
                             ),
-                            leading: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.acidGreen,
-                                borderRadius: BorderRadius.circular(14),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade700,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            alignment: Alignment.centerRight,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.delete_outline_rounded,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  strings.deleteProduct,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          confirmDismiss: (_) async {
+                            try {
+                              await DatabaseService.deleteProduct(productId);
+                            } catch (error) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      strings.deleteProductError(error),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return false;
+                            }
+
+                            try {
+                              await NotificationService.instance
+                                  .cancelProductReminder(
+                                int.parse(productId),
+                              );
+                            } catch (error) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      strings.deleteProductReminderError(error),
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                            return true;
+                          },
+                          onDismissed: (_) {
+                            setState(() {
+                              _products.removeWhere(
+                                (item) => item['id'] == productId,
+                              );
+                            });
+                          },
+                          child: Card(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 5,
+                            ),
+                            color: const Color(0xFFF8F8F5),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
                               ),
-                              child: const Icon(
-                                Icons.shopping_basket_outlined,
-                                color: AppColors.black,
+                              onTap: () => _showProductForm(
+                                existingProduct: product,
                               ),
-                            ),
-                            title: Text(
-                              product['name'] as String,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                            subtitle: Text(
-                              '€${(product['price'] as num).toStringAsFixed(2)}',
-                              style: const TextStyle(color: AppColors.muted),
-                            ),
-                            trailing: const Icon(
-                              Icons.chevron_right_rounded,
-                              color: AppColors.muted,
+                              leading: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.acidGreen,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(
+                                  Icons.shopping_basket_outlined,
+                                  color: AppColors.black,
+                                ),
+                              ),
+                              title: Text(
+                                product['name'] as String,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '€${(product['price'] as num).toStringAsFixed(2)}',
+                                    style:
+                                        const TextStyle(color: AppColors.muted),
+                                  ),
+                                  if (expirationDate != null)
+                                    Text(
+                                      strings.expirationLabel(
+                                        _formatDate(
+                                          context,
+                                          DateTime.parse(expirationDate),
+                                        ),
+                                      ),
+                                      style: const TextStyle(
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              trailing: const Icon(
+                                Icons.chevron_right_rounded,
+                                color: AppColors.muted,
+                              ),
                             ),
                           ),
                         );
                       },
                     ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addProduct,
-        tooltip: 'Aggiungi prodotto',
+        onPressed: () => _showProductForm(),
+        tooltip: strings.addProductTooltip,
         child: const Icon(Icons.add),
       ),
     );

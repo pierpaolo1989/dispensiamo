@@ -1,3 +1,4 @@
+import 'package:dispensiamo/l10n/app_strings.dart';
 import 'package:dispensiamo/service/text_recognition_service.dart';
 import 'package:dispensiamo/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -9,8 +10,9 @@ class ResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Risultato')),
+      appBar: AppBar(title: Text(strings.result)),
       body: FutureBuilder<String>(
         future: TextRecognitionService.analyzeReceipt(imagePath),
         builder: (context, snapshot) {
@@ -21,7 +23,7 @@ class ResultScreen extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                'Testo riconosciuto:\n\n${snapshot.data}',
+                strings.recognizedText(snapshot.data!),
                 style: const TextStyle(
                   fontSize: 16,
                   height: 1.5,
@@ -30,7 +32,7 @@ class ResultScreen extends StatelessWidget {
               ),
             );
           }
-          return const Center(child: Text('Errore durante l\'analisi'));
+          return Center(child: Text(strings.analysisError));
         },
       ),
     );

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dispensiamo/l10n/app_strings.dart';
 import 'package:dispensiamo/scanner_screen.dart';
 import 'package:dispensiamo/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -34,34 +35,60 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                color: AppColors.acidGreen,
-                borderRadius: BorderRadius.circular(26),
-              ),
-              child: const Icon(
-                Icons.receipt_long_rounded,
-                size: 52,
-                color: AppColors.black,
-              ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 104,
+                  height: 104,
+                  decoration: BoxDecoration(
+                    color: AppColors.acidGreen,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: const Icon(
+                    Icons.receipt_long_rounded,
+                    size: 52,
+                    color: AppColors.black,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  strings.appName,
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1,
+                    color: AppColors.black,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 280),
+                  child: Text(
+                    strings.splashTagline,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 16,
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                const SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'dispensiamo',
-              style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -1,
-                color: AppColors.black,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
