@@ -10,7 +10,7 @@ class AppStrings {
   static AppStrings of(BuildContext context) =>
       AppStrings(Localizations.localeOf(context).languageCode);
 
-  String get appName => 'dispensiamo';
+  String get appName => 'Dispensiamo';
   String get splashTagline => _isItalian
       ? 'La tua dispensa, sempre sotto controllo.'
       : 'Your pantry, always under control.';
@@ -36,6 +36,9 @@ class AppStrings {
   String cameraError(Object error) => _isItalian
       ? 'Scatto non riuscito: $error'
       : 'Could not take the photo: $error';
+  String galleryError(Object error) => _isItalian
+      ? 'Impossibile selezionare la foto: $error'
+      : 'Could not select the photo: $error';
   String get result => _isItalian ? 'Risultato' : 'Result';
   String recognizedText(String text) =>
       _isItalian ? 'Testo riconosciuto:\n\n$text' : 'Recognized text:\n\n$text';

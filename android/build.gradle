@@ -13,6 +13,15 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+subprojects {
+    plugins.withId("com.android.library") {
+        if (project.name == "google_ml_kit") {
+            // google_ml_kit 0.7.x predates the AGP 8 namespace requirement.
+            project.extensions.getByName("android").namespace = "com.google_ml_kit"
+        }
+    }
+}
+
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }

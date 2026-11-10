@@ -93,6 +93,7 @@ class _DispensaScreenState extends State<DispensaScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          scrollable: true,
           title: Text(
             existingProduct == null ? strings.addProduct : strings.editProduct,
           ),
@@ -100,126 +101,129 @@ class _DispensaScreenState extends State<DispensaScreen> {
             width: 420,
             child: Form(
               key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      initialValue: name,
-                      autofocus: true,
-                      decoration: InputDecoration(labelText: strings.name),
-                      onSaved: (value) => name = value?.trim() ?? '',
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                              ? strings.enterName
-                              : null,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    initialValue: name,
+                    autofocus: true,
+                    decoration: InputDecoration(labelText: strings.name),
+                    onSaved: (value) => name = value?.trim() ?? '',
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? strings.enterName
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    initialValue: priceValue,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      TextInputFormatter.withFunction((oldValue, newValue) {
+                        return RegExp(r'^\d*\.?\d*$').hasMatch(newValue.text)
+                            ? newValue
+                            : oldValue;
+                      }),
+                    ],
+                    decoration: InputDecoration(labelText: strings.price),
+                    onSaved: (value) => priceValue = value?.trim() ?? '',
+                    validator: (value) {
+                      final price = double.tryParse((value ?? '').trim());
+                      return price == null || !price.isFinite || price < 0
+                          ? strings.enterValidPrice
+                          : null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(strings.expirationDate),
+                    subtitle: Text(
+                      expirationDate == null
+                          ? strings.chooseExpirationDate
+                          : _formatDate(context, expirationDate!),
                     ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      initialValue: priceValue,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        TextInputFormatter.withFunction((oldValue, newValue) {
-                          return RegExp(r'^\d*\.?\d*$').hasMatch(newValue.text)
-                              ? newValue
-                              : oldValue;
-                        }),
-                      ],
-                      decoration: InputDecoration(labelText: strings.price),
-                      onSaved: (value) => priceValue = value?.trim() ?? '',
-                      validator: (value) {
-                        final price = double.tryParse((value ?? '').trim());
-                        return price == null || !price.isFinite || price < 0
-                            ? strings.enterValidPrice
-                            : null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(strings.expirationDate),
-                      subtitle: Text(
-                        expirationDate == null
-                            ? strings.chooseExpirationDate
-                            : _formatDate(context, expirationDate!),
-                      ),
-                      trailing: const Icon(Icons.calendar_month_outlined),
-                      onTap: () async {
-                        final pickedDate = await showDatePicker(
-                          context: context,
-                          initialDate: expirationDate ?? DateTime.now(),
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2100),
-                        );
-                        if (pickedDate != null) {
-                          setDialogState(() {
-                            expirationDate = pickedDate;
-                          });
-                        }
-                      },
-                    ),
-                    if (expirationDate != null)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () {
-                            setDialogState(() {
-                              expirationDate = null;
-                            });
-                          },
-                          child: Text(strings.clearExpirationDate),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<int>(
-                      initialValue: alertDays ?? -1,
-                      decoration: InputDecoration(labelText: strings.reminder),
-                      items: [
-                        DropdownMenuItem<int>(
-                          value: -1,
-                          child: Text(
-                            '${strings.defaultReminder} '
-                            '(${_alertLabel(strings, AppSettings.instance.defaultExpirationAlertDays)})',
-                          ),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 0,
-                          child: Text(strings.noReminder),
-                        ),
-                        for (final days in [1, 2, 3, 7, 14])
-                          DropdownMenuItem<int>(
-                            value: days,
-                            child: Text(strings.defaultAlertDays(days)),
-                          ),
-                      ],
-                      onChanged: (value) {
+                    trailing: const Icon(Icons.calendar_month_outlined),
+                    onTap: () async {
+                      final pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: expirationDate ?? DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (pickedDate != null) {
                         setDialogState(() {
-                          alertDays = value == -1 ? null : value;
+                          expirationDate = pickedDate;
                         });
-                      },
+                      }
+                    },
+                  ),
+                  if (expirationDate != null)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          setDialogState(() {
+                            expirationDate = null;
+                          });
+                        },
+                        child: Text(strings.clearExpirationDate),
+                      ),
                     ),
-                    if (expirationDate == null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            strings.expirationDateRequiredForReminder,
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 12,
-                            ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    initialValue: alertDays ?? -1,
+                    decoration: InputDecoration(labelText: strings.reminder),
+                    items: [
+                      DropdownMenuItem<int>(
+                        value: -1,
+                        child: Text(
+                          '${strings.defaultReminder} '
+                          '(${_alertLabel(strings, AppSettings.instance.defaultExpirationAlertDays)})',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      DropdownMenuItem<int>(
+                        value: 0,
+                        child: Text(strings.noReminder),
+                      ),
+                      for (final days in [1, 2, 3, 7, 14])
+                        DropdownMenuItem<int>(
+                          value: days,
+                          child: Text(strings.defaultAlertDays(days)),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() {
+                        alertDays = value == -1 ? null : value;
+                      });
+                    },
+                  ),
+                  if (expirationDate == null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          strings.expirationDateRequiredForReminder,
+                          style: const TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 12,
                           ),
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
             ),
           ),
           actions: [
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.black,
+              ),
               onPressed: () => Navigator.pop(context),
               child: Text(strings.cancel),
             ),

@@ -59,25 +59,28 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
         index: _selectedIndex,
         children: widgetOptions,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home_rounded),
-            label: strings.home,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.inventory_2_outlined),
-            selectedIcon: const Icon(Icons.inventory_2_rounded),
-            label: strings.pantry,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.tune_rounded),
-            label: strings.settings,
-          ),
-        ],
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home_rounded),
+              label: strings.home,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.inventory_2_outlined),
+              selectedIcon: const Icon(Icons.inventory_2_rounded),
+              label: strings.pantry,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.tune_rounded),
+              label: strings.settings,
+            ),
+          ],
+        ),
       ),
     );
   }

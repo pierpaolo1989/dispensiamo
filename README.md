@@ -1,4 +1,4 @@
-# dispensiamo
+# Dispensiamo
 
 I prodotti della dispensa vengono salvati localmente sul dispositivo: tramite SQLite su mobile e SharedPreferences nel browser per la versione web. L'app non richiede una connessione a Firebase.
 

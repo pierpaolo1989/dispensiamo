@@ -1,10 +1,32 @@
 import 'package:dispensiamo/camera_screen.dart';
 import 'package:dispensiamo/l10n/app_strings.dart';
+import 'package:dispensiamo/result_screen.dart';
 import 'package:dispensiamo/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class MainCameraScreen extends StatelessWidget {
   const MainCameraScreen({super.key});
+
+  Future<void> _selectFromGallery(BuildContext context) async {
+    final strings = AppStrings.of(context);
+    try {
+      final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (image == null || !context.mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ResultScreen(imagePath: image.path),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.galleryError(error))),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,9 +78,7 @@ class MainCameraScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    // Funzionalità di selezione immagine da implementare
-                  },
+                  onPressed: () => _selectFromGallery(context),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.black,
                     padding: const EdgeInsets.symmetric(vertical: 15),
