@@ -6,7 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 class MainCameraScreen extends StatelessWidget {
-  const MainCameraScreen({super.key});
+  const MainCameraScreen({
+    super.key,
+    required this.onProductsImported,
+  });
+
+  final ValueChanged<int> onProductsImported;
 
   Future<void> _selectFromGallery(BuildContext context) async {
     final strings = AppStrings.of(context);
@@ -17,7 +22,10 @@ class MainCameraScreen extends StatelessWidget {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ResultScreen(imagePath: image.path),
+          builder: (context) => ResultScreen(
+            imagePath: image.path,
+            onProductsImported: onProductsImported,
+          ),
         ),
       );
     } catch (error) {
@@ -66,7 +74,9 @@ class MainCameraScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const CameraScreen(),
+                        builder: (context) => CameraScreen(
+                          onProductsImported: onProductsImported,
+                        ),
                       ),
                     );
                   },

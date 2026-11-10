@@ -14,6 +14,7 @@ class ReceiptScannerScreen extends StatefulWidget {
 
 class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
   int _selectedIndex = 0;
+  int _pantryRevision = 0;
 
   void _onItemTapped(int index) {
     setState(() {
@@ -21,12 +22,22 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
     });
   }
 
+  void _onProductsImported(int count) {
+    setState(() {
+      _selectedIndex = 1;
+      _pantryRevision++;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppStrings.of(context).productsImported(count))),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final widgetOptions = <Widget>[
-      const MainCameraScreen(),
-      const DispensaScreen(),
+      MainCameraScreen(onProductsImported: _onProductsImported),
+      DispensaScreen(key: ValueKey(_pantryRevision)),
       const SettingsScreen(),
     ];
     return Scaffold(

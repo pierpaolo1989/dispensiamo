@@ -5,7 +5,9 @@ import 'package:dispensiamo/l10n/app_strings.dart';
 import 'result_screen.dart';
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({super.key});
+  const CameraScreen({super.key, required this.onProductsImported});
+
+  final ValueChanged<int> onProductsImported;
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -78,8 +80,10 @@ class _CameraScreenState extends State<CameraScreen> {
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            ResultScreen(imagePath: image.path),
+                        builder: (context) => ResultScreen(
+                          imagePath: image.path,
+                          onProductsImported: widget.onProductsImported,
+                        ),
                       ),
                     );
                   } catch (error) {

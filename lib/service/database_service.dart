@@ -78,6 +78,36 @@ class DatabaseService {
     return db.insert(_tableName, values);
   }
 
+  static Future<List<int>> saveProducts(
+    List<Map<String, dynamic>> products,
+  ) async {
+    final values = products.map(_validatedProductValues).toList();
+    if (values.isEmpty) return [];
+
+    if (kIsWeb) {
+      final preferences = await SharedPreferences.getInstance();
+      final savedProducts = await _getWebProducts(preferences);
+      final nextId = preferences.getInt(_webNextProductIdKey) ?? 1;
+      final ids = List.generate(values.length, (index) => nextId + index);
+      savedProducts.addAll([
+        for (var index = 0; index < values.length; index++)
+          {'id': ids[index], ...values[index]},
+      ]);
+      await preferences.setString(_webProductsKey, jsonEncode(savedProducts));
+      await preferences.setInt(_webNextProductIdKey, nextId + values.length);
+      return ids;
+    }
+
+    final db = await _db;
+    return db.transaction((transaction) async {
+      final ids = <int>[];
+      for (final value in values) {
+        ids.add(await transaction.insert(_tableName, value));
+      }
+      return ids;
+    });
+  }
+
   static Future<void> updateProduct(
     String id,
     Map<String, dynamic> product,

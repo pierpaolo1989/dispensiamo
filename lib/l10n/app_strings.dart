@@ -40,6 +40,36 @@ class AppStrings {
       ? 'Impossibile selezionare la foto: $error'
       : 'Could not select the photo: $error';
   String get result => _isItalian ? 'Risultato' : 'Result';
+  String get reviewReceipt =>
+      _isItalian ? 'Rivedi lo scontrino' : 'Review receipt';
+  String get receiptReviewDescription => _isItalian
+      ? 'Controlla i prodotti e i prezzi riconosciuti prima di aggiungerli alla dispensa.'
+      : 'Check the recognized products and prices before adding them to your pantry.';
+  String get receiptText =>
+      _isItalian ? 'Testo letto dallo scontrino' : 'Text read from receipt';
+  String get addReceiptProduct => _isItalian ? 'Aggiungi riga' : 'Add item';
+  String get removeReceiptProduct =>
+      _isItalian ? 'Rimuovi prodotto' : 'Remove product';
+  String get noReceiptProducts => _isItalian
+      ? 'Non sono stati riconosciuti prodotti. Puoi aggiungere le righe manualmente.'
+      : 'No products were recognized. You can add items manually.';
+  String get importReceiptProducts =>
+      _isItalian ? 'Aggiungi alla dispensa' : 'Add to pantry';
+  String receiptAnalysisError(Object error) => _isItalian
+      ? 'Impossibile leggere lo scontrino: $error'
+      : 'Could not read the receipt: $error';
+  String get importReceiptError => _isItalian
+      ? 'Impossibile salvare i prodotti. Riprova.'
+      : 'Could not save the products. Please try again.';
+  String productsImported(int count) => _isItalian
+      ? count == 1
+          ? 'Aggiunto 1 prodotto alla dispensa'
+          : 'Aggiunti $count prodotti alla dispensa'
+      : count == 1
+          ? 'Added 1 product to the pantry'
+          : 'Added $count products to the pantry';
+  String get invalidReceiptPrice =>
+      _isItalian ? 'Inserisci un prezzo valido' : 'Enter a valid price';
   String recognizedText(String text) =>
       _isItalian ? 'Testo riconosciuto:\n\n$text' : 'Recognized text:\n\n$text';
   String get analysisError => _isItalian
