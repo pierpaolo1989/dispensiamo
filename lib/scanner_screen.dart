@@ -2,6 +2,7 @@ import 'package:dispensiamo/l10n/app_strings.dart';
 import 'package:dispensiamo/dispensa_screen.dart';
 import 'package:dispensiamo/main_camera_screen.dart';
 import 'package:dispensiamo/settings_screen.dart';
+import 'package:dispensiamo/statistics_screen.dart';
 import 'package:dispensiamo/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -42,6 +43,21 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
     ];
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          if (_selectedIndex == 1)
+            IconButton(
+              tooltip: strings.spendingStatisticsTooltip,
+              icon: const Icon(Icons.bar_chart_rounded),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (context) => const StatisticsScreen(),
+                  ),
+                );
+              },
+            ),
+        ],
         title: Row(
           children: [
             Container(

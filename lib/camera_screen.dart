@@ -76,12 +76,14 @@ class _CameraScreenState extends State<CameraScreen> {
                   try {
                     await _initializeControllerFuture;
                     final image = await _controller.takePicture();
+                    final scanDate = DateTime.now();
                     if (!context.mounted) return;
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => ResultScreen(
                           imagePath: image.path,
+                          scanDate: scanDate,
                           onProductsImported: widget.onProductsImported,
                         ),
                       ),

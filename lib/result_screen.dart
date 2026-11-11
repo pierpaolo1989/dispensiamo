@@ -9,10 +9,12 @@ class ResultScreen extends StatefulWidget {
   const ResultScreen({
     super.key,
     required this.imagePath,
+    required this.scanDate,
     this.onProductsImported,
   });
 
   final String imagePath;
+  final DateTime scanDate;
   final ValueChanged<int>? onProductsImported;
 
   @override
@@ -23,6 +25,7 @@ class _ResultScreenState extends State<ResultScreen> {
   final _formKey = GlobalKey<FormState>();
   final _products = <_ReceiptProductFields>[];
   String? _recognizedText;
+  late DateTime _purchaseDate = widget.scanDate;
   Object? _analysisError;
   bool _isLoading = true;
   bool _isSaving = false;
@@ -48,18 +51,21 @@ class _ResultScreenState extends State<ResultScreen> {
     });
 
     try {
-      final text = await TextRecognitionService.analyzeReceipt(
+      final ocrResult = await TextRecognitionService.analyzeReceipt(
         widget.imagePath,
       );
-      final recognizedProducts = ReceiptParser.parse(text);
+      final receipt = const ReceiptParser().parseReceipt(ocrResult);
       if (!mounted) return;
 
       setState(() {
-        _recognizedText = text;
+        _recognizedText = ocrResult.text;
+        _purchaseDate = receipt.date == null
+            ? widget.scanDate
+            : DateTime.parse(receipt.date!);
         _products
           ..forEach((product) => product.dispose())
           ..clear()
-          ..addAll(recognizedProducts.map(_ReceiptProductFields.fromDraft));
+          ..addAll(receipt.items.map(_ReceiptProductFields.fromDraft));
         _isLoading = false;
       });
     } catch (error) {
@@ -92,6 +98,7 @@ class _ResultScreenState extends State<ResultScreen> {
         'price': double.parse(draft.price.text.trim().replaceAll(',', '.')),
         'expiration_date': null,
         'alert_days': null,
+        'purchase_date': _formatDateForStorage(_purchaseDate),
       };
     }).toList();
 
@@ -120,6 +127,11 @@ class _ResultScreenState extends State<ResultScreen> {
       );
     }
   }
+
+  static String _formatDateForStorage(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {

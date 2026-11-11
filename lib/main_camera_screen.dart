@@ -24,6 +24,7 @@ class MainCameraScreen extends StatelessWidget {
         MaterialPageRoute(
           builder: (context) => ResultScreen(
             imagePath: image.path,
+            scanDate: DateTime.now(),
             onProductsImported: onProductsImported,
           ),
         ),

@@ -238,6 +238,9 @@ class _DispensaScreenState extends State<DispensaScreen> {
                       ? null
                       : _dateForStorage(expirationDate!),
                   'alert_days': alertDays,
+                  'purchase_date': existingProduct == null
+                      ? _dateForStorage(DateTime.now())
+                      : existingProduct['purchase_date'],
                 });
               },
               child: Text(strings.save),

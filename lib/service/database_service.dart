@@ -8,7 +8,7 @@ import 'package:sqflite/sqflite.dart';
 class DatabaseService {
   static const productsPageSize = 10;
   static const _databaseName = 'dispensiamo.db';
-  static const _databaseVersion = 2;
+  static const _databaseVersion = 3;
   static const _tableName = 'products';
   static const _settingsTableName = 'settings';
   static const _webProductsKey = 'dispensiamo.products';
@@ -33,7 +33,8 @@ class DatabaseService {
             name TEXT NOT NULL,
             price REAL NOT NULL,
             expiration_date TEXT,
-            alert_days INTEGER
+            alert_days INTEGER,
+            purchase_date TEXT
           )
         ''');
         await db.execute('''
@@ -57,6 +58,11 @@ class DatabaseService {
               value TEXT NOT NULL
             )
           ''');
+        }
+        if (oldVersion < 3) {
+          await db.execute(
+            'ALTER TABLE $_tableName ADD COLUMN purchase_date TEXT',
+          );
         }
       },
     );
@@ -177,7 +183,35 @@ class DatabaseService {
       'price': price,
       'expiration_date': expirationDate,
       'alert_days': alertDays,
+      'purchase_date': product.containsKey('purchase_date')
+          ? _validatedPurchaseDate(product['purchase_date'])
+          : _todayDate(),
     };
+  }
+
+  static String _todayDate() {
+    final now = DateTime.now();
+    return '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+  }
+
+  static String? _validatedPurchaseDate(Object? value) {
+    if (value == null) return null;
+    if (value is! String || !_isValidDate(value)) {
+      throw ArgumentError('La data di acquisto del prodotto non è valida.');
+    }
+    return value;
+  }
+
+  static bool _isValidDate(String value) {
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) return false;
+    final date = DateTime.tryParse(value);
+    if (date == null) return false;
+    return date.year.toString().padLeft(4, '0') == value.substring(0, 4) &&
+        date.month.toString().padLeft(2, '0') == value.substring(5, 7) &&
+        date.day.toString().padLeft(2, '0') == value.substring(8, 10) &&
+        value.length == 10;
   }
 
   static Future<List<Map<String, dynamic>>> getPaginatedProducts(
@@ -197,7 +231,14 @@ class DatabaseService {
     final lastId = lastDocId == null ? null : int.parse(lastDocId);
     final rows = await db.query(
       _tableName,
-      columns: ['id', 'name', 'price', 'expiration_date', 'alert_days'],
+      columns: [
+        'id',
+        'name',
+        'price',
+        'expiration_date',
+        'alert_days',
+        'purchase_date',
+      ],
       where: lastId == null ? null : 'id > ?',
       whereArgs: lastId == null ? null : [lastId],
       orderBy: 'id ASC',
@@ -216,7 +257,14 @@ class DatabaseService {
     final db = await _db;
     final rows = await db.query(
       _tableName,
-      columns: ['id', 'name', 'price', 'expiration_date', 'alert_days'],
+      columns: [
+        'id',
+        'name',
+        'price',
+        'expiration_date',
+        'alert_days',
+        'purchase_date',
+      ],
       orderBy: 'id ASC',
     );
     return rows.map(_productMap).toList();

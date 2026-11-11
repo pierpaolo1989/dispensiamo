@@ -88,6 +88,26 @@ class AppStrings {
   String get loadMore => _isItalian ? 'Carica altri' : 'Load more';
   String get noProducts =>
       _isItalian ? 'Nessun prodotto salvato' : 'No saved products';
+  String get spendingStatistics =>
+      _isItalian ? 'Statistiche spese' : 'Spending statistics';
+  String get spendingStatisticsTooltip =>
+      _isItalian ? 'Apri statistiche spese' : 'Open spending statistics';
+  String get dateRange => _isItalian ? 'Intervallo date' : 'Date range';
+  String get totalSpending => _isItalian ? 'Spesa totale' : 'Total spending';
+  String get productsPurchased =>
+      _isItalian ? 'Prodotti acquistati' : 'Products purchased';
+  String get dailySpending =>
+      _isItalian ? 'Spesa giornaliera' : 'Daily spending';
+  String get noSpendingInRange => _isItalian
+      ? 'Nessuna spesa registrata in questo intervallo.'
+      : 'No spending recorded in this date range.';
+  String get spendingDataUnavailable => _isItalian
+      ? 'Le spese dei prodotti aggiunti prima di questa funzione non hanno una data e non compaiono nel grafico.'
+      : 'Products added before this feature have no purchase date and are not shown in the chart.';
+  String get spendingLoadError => _isItalian
+      ? 'Impossibile caricare le statistiche:'
+      : 'Could not load statistics:';
+  String get dateRangeSeparator => _isItalian ? ' - ' : ' – ';
   String get addProductTooltip =>
       _isItalian ? 'Aggiungi prodotto' : 'Add product';
   String get deleteProduct => _isItalian ? 'Elimina' : 'Delete';
