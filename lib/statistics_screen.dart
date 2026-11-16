@@ -151,19 +151,27 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       )
                     else
                       _SpendingChart(buckets: statistics.buckets),
-                    if (_products.any(
-                      (product) => product['purchase_date'] == null,
-                    )) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        strings.spendingDataUnavailable,
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 12,
-                          height: 1.4,
+                    const SizedBox(height: 24),
+                    Text(
+                      strings.categorySpending,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (statistics.categoryBuckets.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 36),
+                        child: Text(
+                          strings.noCategorySpending,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.muted),
                         ),
+                      )
+                    else
+                      _CategorySpendingChart(
+                        buckets: statistics.categoryBuckets,
                       ),
-                    ],
                   ],
                 ),
     );
@@ -210,20 +218,27 @@ class _StatisticCard extends StatelessWidget {
       );
 }
 
-class _SpendingChart extends StatelessWidget {
+class _SpendingChart extends StatefulWidget {
   const _SpendingChart({required this.buckets});
 
   final List<SpendingBucket> buckets;
 
   @override
+  State<_SpendingChart> createState() => _SpendingChartState();
+}
+
+class _SpendingChartState extends State<_SpendingChart> {
+  int? _selectedIndex;
+
+  @override
   Widget build(BuildContext context) {
-    final maxAmount = buckets.fold<double>(
+    final maxAmount = widget.buckets.fold<double>(
       0,
       (maximum, bucket) => math.max(maximum, bucket.amount),
     );
     final chartWidth = math.max(
       MediaQuery.sizeOf(context).width - 40,
-      buckets.length * 52.0,
+      widget.buckets.length * 52.0,
     );
     final localizations = MaterialLocalizations.of(context);
 
@@ -241,17 +256,29 @@ class _SpendingChart extends StatelessWidget {
                 SizedBox(
                   height: 190,
                   width: chartWidth,
-                  child: CustomPaint(
-                    painter: _SpendingChartPainter(
-                      buckets: buckets,
-                      maxAmount: maxAmount,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapUp: (details) {
+                      final index =
+                          ((details.localPosition.dx - 10) / 52).floor();
+                      if (index < 0 || index >= widget.buckets.length) return;
+                      setState(() {
+                        _selectedIndex = index;
+                      });
+                    },
+                    child: CustomPaint(
+                      painter: _SpendingChartPainter(
+                        buckets: widget.buckets,
+                        maxAmount: maxAmount,
+                        selectedIndex: _selectedIndex,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    for (final bucket in buckets)
+                    for (final bucket in widget.buckets)
                       SizedBox(
                         width: 52,
                         child: Text(
@@ -279,10 +306,12 @@ class _SpendingChartPainter extends CustomPainter {
   const _SpendingChartPainter({
     required this.buckets,
     required this.maxAmount,
+    required this.selectedIndex,
   });
 
   final List<SpendingBucket> buckets;
   final double maxAmount;
+  final int? selectedIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -304,6 +333,10 @@ class _SpendingChartPainter extends CustomPainter {
     final barPaint = Paint()
       ..color = AppColors.acidGreen
       ..style = PaintingStyle.fill;
+    final barOutlinePaint = Paint()
+      ..color = AppColors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
     for (var index = 0; index < buckets.length; index++) {
       final bucket = buckets[index];
       final barHeight = maxAmount == 0
@@ -311,17 +344,263 @@ class _SpendingChartPainter extends CustomPainter {
           : (bucket.amount / maxAmount) * (chartHeight - 8);
       final left = horizontalInset + index * 52 + 13;
       final top = verticalInset + chartHeight - barHeight;
+      final barRect = Rect.fromLTWH(left, top, 26, barHeight);
+      final bar = RRect.fromRectAndRadius(
+        barRect,
+        const Radius.circular(6),
+      );
       canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(left, top, 26, barHeight),
-          const Radius.circular(6),
-        ),
+        bar,
         barPaint,
       );
+      canvas.drawRRect(bar, barOutlinePaint);
+
+      if (index == selectedIndex) {
+        final label = TextPainter(
+          text: TextSpan(
+            text: '€${bucket.amount.toStringAsFixed(2)}',
+            style: const TextStyle(
+              color: AppColors.acidGreen,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        final labelX = left + (barRect.width - label.width) / 2;
+        final labelY = top - label.height - 8 >= verticalInset
+            ? top - label.height - 8
+            : top + 4;
+        final labelRect = Rect.fromLTWH(
+          labelX - 5,
+          labelY - 3,
+          label.width + 10,
+          label.height + 6,
+        );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(labelRect, const Radius.circular(5)),
+          Paint()..color = AppColors.black,
+        );
+        label.paint(canvas, Offset(labelX, labelY));
+      }
     }
   }
 
   @override
   bool shouldRepaint(_SpendingChartPainter oldDelegate) =>
-      oldDelegate.buckets != buckets || oldDelegate.maxAmount != maxAmount;
+      oldDelegate.buckets != buckets ||
+      oldDelegate.maxAmount != maxAmount ||
+      oldDelegate.selectedIndex != selectedIndex;
+}
+
+class _CategorySpendingChart extends StatefulWidget {
+  const _CategorySpendingChart({required this.buckets});
+
+  final List<CategorySpendingBucket> buckets;
+
+  @override
+  State<_CategorySpendingChart> createState() =>
+      _CategorySpendingChartState();
+}
+
+class _CategorySpendingChartState extends State<_CategorySpendingChart> {
+  int? _selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final total = widget.buckets.fold<double>(
+      0,
+      (sum, bucket) => sum + bucket.amount,
+    );
+    final selectedIndex =
+        _selectedIndex != null && _selectedIndex! < widget.buckets.length
+            ? _selectedIndex
+            : null;
+    final selectedBucket =
+        selectedIndex == null ? null : widget.buckets[selectedIndex];
+
+    return Card(
+      color: const Color(0xFFF8F8F5),
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            SizedBox(
+              width: 220,
+              height: 220,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapUp: (details) {
+                  final offset = details.localPosition - const Offset(110, 110);
+                  if (offset.distance < 54) {
+                    setState(() {
+                      _selectedIndex = null;
+                    });
+                    return;
+                  }
+                  if (offset.distance > 98) return;
+
+                  var angle = math.atan2(offset.dy, offset.dx) + math.pi / 2;
+                  if (angle < 0) angle += math.pi * 2;
+                  var cumulativeAngle = 0.0;
+                  for (var index = 0; index < widget.buckets.length; index++) {
+                    cumulativeAngle +=
+                        widget.buckets[index].amount / total * math.pi * 2;
+                    if (angle < cumulativeAngle) {
+                      setState(() {
+                        _selectedIndex = index;
+                      });
+                      return;
+                    }
+                  }
+                },
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CustomPaint(
+                      size: const Size.square(220),
+                      painter: _CategoryDonutPainter(
+                        buckets: widget.buckets,
+                        total: total,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 100,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (selectedBucket != null)
+                            Text(
+                              strings.productCategory(
+                                selectedBucket.category,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 11,
+                              ),
+                            )
+                          else
+                            Text(
+                              strings.totalSpending,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 11,
+                              ),
+                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '€${(selectedBucket?.amount ?? total).toStringAsFixed(2)}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (var index = 0; index < widget.buckets.length; index++)
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: widget.buckets[index].category.color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          strings.productCategory(
+                            widget.buckets[index].category,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        '€${widget.buckets[index].amount.toStringAsFixed(2)}',
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 48,
+                        child: Text(
+                          '${(widget.buckets[index].amount / total * 100).toStringAsFixed(1)}%',
+                          textAlign: TextAlign.end,
+                          style: const TextStyle(color: AppColors.muted),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryDonutPainter extends CustomPainter {
+  const _CategoryDonutPainter({
+    required this.buckets,
+    required this.total,
+  });
+
+  final List<CategorySpendingBucket> buckets;
+  final double total;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (total <= 0) return;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final chartRect = Rect.fromCircle(center: center, radius: 98);
+    var startAngle = -math.pi / 2;
+    for (final bucket in buckets) {
+      final sweepAngle = bucket.amount / total * math.pi * 2;
+      canvas.drawArc(
+        chartRect,
+        startAngle,
+        sweepAngle,
+        true,
+        Paint()..color = bucket.category.color,
+      );
+      startAngle += sweepAngle;
+    }
+    canvas.drawCircle(
+      center,
+      54,
+      Paint()..color = const Color(0xFFF8F8F5),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CategoryDonutPainter oldDelegate) =>
+      oldDelegate.buckets != buckets || oldDelegate.total != total;
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   static const acidGreen = Color(0xFFCCFF00);
+  static const acidGreenInk = Color(0xFF586E00);
   static const black = Color(0xFF111111);
   static const white = Color(0xFFFFFFFF);
   static const muted = Color(0xFF707070);
@@ -47,16 +48,30 @@ class AppTheme {
           ),
         ),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.acidGreenInk,
+          overlayColor: AppColors.acidGreen.withValues(alpha: 0.18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF5F5F0),
+        fillColor: AppColors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: Color(0xFFE2E3DC)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE2E3DC)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.black, width: 1.5),
+          borderSide:
+              const BorderSide(color: AppColors.acidGreenInk, width: 1.5),
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(

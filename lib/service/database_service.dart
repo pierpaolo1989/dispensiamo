@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:dispensiamo/model/product_category.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
@@ -8,7 +9,7 @@ import 'package:sqflite/sqflite.dart';
 class DatabaseService {
   static const productsPageSize = 10;
   static const _databaseName = 'dispensiamo.db';
-  static const _databaseVersion = 3;
+  static const _databaseVersion = 4;
   static const _tableName = 'products';
   static const _settingsTableName = 'settings';
   static const _webProductsKey = 'dispensiamo.products';
@@ -34,7 +35,8 @@ class DatabaseService {
             price REAL NOT NULL,
             expiration_date TEXT,
             alert_days INTEGER,
-            purchase_date TEXT
+            purchase_date TEXT,
+            category TEXT NOT NULL DEFAULT 'uncategorized'
           )
         ''');
         await db.execute('''
@@ -63,6 +65,26 @@ class DatabaseService {
           await db.execute(
             'ALTER TABLE $_tableName ADD COLUMN purchase_date TEXT',
           );
+        }
+        if (oldVersion < 4) {
+          await db.execute(
+            "ALTER TABLE $_tableName ADD COLUMN category TEXT NOT NULL DEFAULT 'uncategorized'",
+          );
+          final products = await db.query(
+            _tableName,
+            columns: ['id', 'name'],
+          );
+          for (final product in products) {
+            final category = ProductCategory.suggestForName(
+              product['name'] as String,
+            );
+            await db.update(
+              _tableName,
+              {'category': category.name},
+              where: 'id = ?',
+              whereArgs: [product['id']],
+            );
+          }
         }
       },
     );
@@ -163,6 +185,10 @@ class DatabaseService {
     final price = product['price'];
     final expirationDate = product['expiration_date'];
     final alertDays = product['alert_days'];
+    final category = product['category'] ??
+        (name is String
+            ? ProductCategory.suggestForName(name).name
+            : null);
     if (name is! String ||
         name.trim().isEmpty ||
         price is! num ||
@@ -172,9 +198,11 @@ class DatabaseService {
         (expirationDate is String &&
             DateTime.tryParse(expirationDate) == null) ||
         (alertDays != null &&
-            (alertDays is! int || alertDays < 0 || alertDays > 30))) {
+            (alertDays is! int || alertDays < 0 || alertDays > 30)) ||
+        category is! String ||
+        !ProductCategory.values.any((value) => value.name == category)) {
       throw ArgumentError(
-        'Ogni prodotto deve avere un nome, un prezzo valido e una scadenza valida.',
+        'Ogni prodotto deve avere un nome, un prezzo, una categoria e una scadenza validi.',
       );
     }
 
@@ -183,6 +211,7 @@ class DatabaseService {
       'price': price,
       'expiration_date': expirationDate,
       'alert_days': alertDays,
+      'category': category,
       'purchase_date': product.containsKey('purchase_date')
           ? _validatedPurchaseDate(product['purchase_date'])
           : _todayDate(),
@@ -238,6 +267,7 @@ class DatabaseService {
         'expiration_date',
         'alert_days',
         'purchase_date',
+        'category',
       ],
       where: lastId == null ? null : 'id > ?',
       whereArgs: lastId == null ? null : [lastId],
@@ -264,16 +294,27 @@ class DatabaseService {
         'expiration_date',
         'alert_days',
         'purchase_date',
+        'category',
       ],
       orderBy: 'id ASC',
     );
     return rows.map(_productMap).toList();
   }
 
-  static Map<String, dynamic> _productMap(Map<String, Object?> row) => {
-        ...row,
-        'id': row['id'].toString(),
-      };
+  static Map<String, dynamic> _productMap(Map<String, Object?> row) {
+    final name = row['name'] as String;
+    final storedCategory = row['category'];
+    final category = ProductCategory.values.any(
+      (value) => value.name == storedCategory,
+    )
+        ? storedCategory as String
+        : ProductCategory.suggestForName(name).name;
+    return {
+      ...row,
+      'id': row['id'].toString(),
+      'category': category,
+    };
+  }
 
   static Future<String?> getSetting(String key) async {
     if (kIsWeb) {

@@ -5,8 +5,15 @@ import 'package:dispensiamo/service/notification_service.dart';
 import 'package:dispensiamo/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _isUpdatingAutoDelete = false;
 
   Future<void> _updateLanguage(
     BuildContext context,
@@ -59,6 +66,21 @@ class SettingsScreen extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(strings.settingsSaveError(error))),
       );
+    }
+  }
+
+  Future<void> _toggleAutoDeleteExpired(bool value) async {
+    setState(() {
+      _isUpdatingAutoDelete = true;
+    });
+    try {
+      await _updateAutoDeleteExpired(context, value);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingAutoDelete = false;
+        });
+      }
     }
   }
 
@@ -152,9 +174,8 @@ class SettingsScreen extends StatelessWidget {
                 children: [
                   SwitchListTile(
                     value: settings.autoDeleteExpiredProducts,
-                    onChanged: (value) {
-                      _updateAutoDeleteExpired(context, value);
-                    },
+                    onChanged:
+                        _isUpdatingAutoDelete ? null : _toggleAutoDeleteExpired,
                     contentPadding: EdgeInsets.zero,
                     title: Text(strings.autoDeleteExpiredProducts),
                   ),

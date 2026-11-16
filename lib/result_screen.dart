@@ -1,5 +1,6 @@
 import 'package:dispensiamo/l10n/app_strings.dart';
 import 'package:dispensiamo/service/database_service.dart';
+import 'package:dispensiamo/model/product_category.dart';
 import 'package:dispensiamo/service/receipt_parser.dart';
 import 'package:dispensiamo/service/text_recognition_service.dart';
 import 'package:dispensiamo/theme/app_theme.dart';
@@ -98,6 +99,7 @@ class _ResultScreenState extends State<ResultScreen> {
         'price': double.parse(draft.price.text.trim().replaceAll(',', '.')),
         'expiration_date': null,
         'alert_days': null,
+        'category': draft.category.name,
         'purchase_date': _formatDateForStorage(_purchaseDate),
       };
     }).toList();
@@ -224,6 +226,11 @@ class _ResultScreenState extends State<ResultScreen> {
                 final product = _products[index];
                 return Card(
                   margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                  color: const Color(0xFFF8F8F5),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
@@ -235,10 +242,41 @@ class _ResultScreenState extends State<ResultScreen> {
                             labelText: strings.name,
                             isDense: true,
                           ),
+                          onChanged: (value) {
+                            if (product.categoryManuallySelected) return;
+                            setState(() {
+                              product.category =
+                                  ProductCategory.suggestForName(value);
+                            });
+                          },
                           validator: (value) =>
                               value == null || value.trim().isEmpty
                                   ? strings.enterName
                                   : null,
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<ProductCategory>(
+                          key: ValueKey(product.category),
+                          initialValue: product.category,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: strings.category,
+                            isDense: true,
+                          ),
+                          items: [
+                            for (final category in ProductCategory.values)
+                              DropdownMenuItem(
+                                value: category,
+                                child: Text(strings.productCategory(category)),
+                              ),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              product.category = value;
+                              product.categoryManuallySelected = true;
+                            });
+                          },
                         ),
                         const SizedBox(height: 8),
                         Row(
@@ -290,7 +328,8 @@ class _ResultScreenState extends State<ResultScreen> {
 class _ReceiptProductFields {
   _ReceiptProductFields({String name = '', String price = ''})
       : name = TextEditingController(text: name),
-        price = TextEditingController(text: price);
+        price = TextEditingController(text: price),
+        category = ProductCategory.suggestForName(name);
 
   factory _ReceiptProductFields.fromDraft(ReceiptProductDraft draft) =>
       _ReceiptProductFields(
@@ -300,6 +339,8 @@ class _ReceiptProductFields {
 
   final TextEditingController name;
   final TextEditingController price;
+  ProductCategory category;
+  bool categoryManuallySelected = false;
 
   void dispose() {
     name.dispose();

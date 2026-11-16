@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dispensiamo/model/product_category.dart';
 
 class AppStrings {
   const AppStrings(this.languageCode);
@@ -43,8 +44,8 @@ class AppStrings {
   String get reviewReceipt =>
       _isItalian ? 'Rivedi lo scontrino' : 'Review receipt';
   String get receiptReviewDescription => _isItalian
-      ? 'Controlla i prodotti e i prezzi riconosciuti prima di aggiungerli alla dispensa.'
-      : 'Check the recognized products and prices before adding them to your pantry.';
+      ? 'Controlla i prodotti e i prezzi riconosciuti prima di aggiungerli alla dispensa. Le categorie sono suggerite offline e puoi modificarle.'
+      : 'Check the recognized products and prices before adding them to your pantry. Categories are suggested offline and can be changed.';
   String get receiptText =>
       _isItalian ? 'Testo letto dallo scontrino' : 'Text read from receipt';
   String get addReceiptProduct => _isItalian ? 'Aggiungi riga' : 'Add item';
@@ -96,14 +97,32 @@ class AppStrings {
   String get totalSpending => _isItalian ? 'Spesa totale' : 'Total spending';
   String get productsPurchased =>
       _isItalian ? 'Prodotti acquistati' : 'Products purchased';
+  String get category => _isItalian ? 'Categoria' : 'Category';
+  String get categorySuggestionHint => _isItalian
+      ? 'Suggerita offline dal nome; puoi modificarla.'
+      : 'Suggested offline from the name; you can change it.';
+  String productCategory(ProductCategory value) => switch (value) {
+        ProductCategory.uncategorized =>
+          _isItalian ? 'Da categorizzare' : 'Uncategorized',
+        ProductCategory.food => _isItalian ? 'Alimentari' : 'Food',
+        ProductCategory.beverages => _isItalian ? 'Bevande' : 'Beverages',
+        ProductCategory.personalCare =>
+          _isItalian ? 'Cura della persona' : 'Personal care',
+        ProductCategory.homeCare =>
+          _isItalian ? 'Pulizia casa' : 'Home care',
+        ProductCategory.pets => _isItalian ? 'Animali' : 'Pets',
+        ProductCategory.other => _isItalian ? 'Altro' : 'Other',
+      };
+  String get categorySpending =>
+      _isItalian ? 'Spesa per categoria' : 'Spending by category';
+  String get noCategorySpending => _isItalian
+      ? 'Nessuna spesa per categoria in questo intervallo.'
+      : 'No category spending in this date range.';
   String get dailySpending =>
       _isItalian ? 'Spesa giornaliera' : 'Daily spending';
   String get noSpendingInRange => _isItalian
       ? 'Nessuna spesa registrata in questo intervallo.'
       : 'No spending recorded in this date range.';
-  String get spendingDataUnavailable => _isItalian
-      ? 'Le spese dei prodotti aggiunti prima di questa funzione non hanno una data e non compaiono nel grafico.'
-      : 'Products added before this feature have no purchase date and are not shown in the chart.';
   String get spendingLoadError => _isItalian
       ? 'Impossibile caricare le statistiche:'
       : 'Could not load statistics:';

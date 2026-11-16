@@ -53,16 +53,23 @@ class AppSettings extends ChangeNotifier {
 
   Future<void> setAutoDeleteExpiredProducts(bool enabled) async {
     if (_autoDeleteExpiredProducts == enabled) return;
-    await DatabaseService.setSetting(
-      'auto_delete_expired',
-      enabled ? 'true' : 'false',
-    );
+    final previousValue = _autoDeleteExpiredProducts;
     _autoDeleteExpiredProducts = enabled;
-    if (enabled) {
-      await WorkManagerService.scheduleDeleteExpiredProductsTask();
-    } else {
-      await WorkManagerService.cancelDeleteExpiredProductsTask();
-    }
     notifyListeners();
+    try {
+      await DatabaseService.setSetting(
+        'auto_delete_expired',
+        enabled ? 'true' : 'false',
+      );
+      if (enabled) {
+        await WorkManagerService.scheduleDeleteExpiredProductsTask();
+      } else {
+        await WorkManagerService.cancelDeleteExpiredProductsTask();
+      }
+    } catch (error) {
+      _autoDeleteExpiredProducts = previousValue;
+      notifyListeners();
+      rethrow;
+    }
   }
 }

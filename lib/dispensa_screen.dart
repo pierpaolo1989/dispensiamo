@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:dispensiamo/l10n/app_strings.dart';
+import 'package:dispensiamo/model/product_category.dart';
 import 'package:dispensiamo/service/app_settings.dart';
 import 'package:dispensiamo/service/database_service.dart';
 import 'package:dispensiamo/service/notification_service.dart';
@@ -84,6 +85,10 @@ class _DispensaScreenState extends State<DispensaScreen> {
     var priceValue = existingProduct == null
         ? ''
         : (existingProduct['price'] as num).toString();
+    var category = ProductCategory.fromId(
+      existingProduct?['category'] ?? ProductCategory.suggestForName(name).name,
+    );
+    var categoryManuallySelected = existingProduct != null;
     final savedDate = existingProduct?['expiration_date'] as String?;
     DateTime? expirationDate =
         savedDate == null ? null : DateTime.parse(savedDate);
@@ -106,9 +111,14 @@ class _DispensaScreenState extends State<DispensaScreen> {
                 children: [
                   TextFormField(
                     initialValue: name,
-                    autofocus: true,
                     decoration: InputDecoration(labelText: strings.name),
                     onSaved: (value) => name = value?.trim() ?? '',
+                    onChanged: (value) {
+                      if (categoryManuallySelected) return;
+                      setDialogState(() {
+                        category = ProductCategory.suggestForName(value);
+                      });
+                    },
                     validator: (value) => value == null || value.trim().isEmpty
                         ? strings.enterName
                         : null,
@@ -132,6 +142,30 @@ class _DispensaScreenState extends State<DispensaScreen> {
                       return price == null || !price.isFinite || price < 0
                           ? strings.enterValidPrice
                           : null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<ProductCategory>(
+                    key: ValueKey(category),
+                    initialValue: category,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: strings.category,
+                      helperText: strings.categorySuggestionHint,
+                    ),
+                    items: [
+                      for (final value in ProductCategory.values)
+                        DropdownMenuItem(
+                          value: value,
+                          child: Text(strings.productCategory(value)),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setDialogState(() {
+                        category = value;
+                        categoryManuallySelected = true;
+                      });
                     },
                   ),
                   const SizedBox(height: 12),
@@ -238,6 +272,7 @@ class _DispensaScreenState extends State<DispensaScreen> {
                       ? null
                       : _dateForStorage(expirationDate!),
                   'alert_days': alertDays,
+                  'category': category.name,
                   'purchase_date': existingProduct == null
                       ? _dateForStorage(DateTime.now())
                       : existingProduct['purchase_date'],
@@ -393,7 +428,7 @@ class _DispensaScreenState extends State<DispensaScreen> {
                                 );
                               }
                             }
-                            
+
                             if (!context.mounted) return true;
                             setState(() {
                               _products.removeWhere(
@@ -466,7 +501,8 @@ class _ProductTileState extends State<_ProductTile>
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           onTap: widget.onTap,
           leading: const _ProductIcon(),
           title: Text(
@@ -475,8 +511,10 @@ class _ProductTileState extends State<_ProductTile>
           ),
           subtitle: _ProductSubtitle(
             price: widget.product['price'] as num,
+            category: ProductCategory.fromId(widget.product['category']),
             expirationDate: widget.expirationDate,
-            formatDate: (context, date) => _DispensaScreenState._formatDate(context, date),
+            formatDate: (context, date) =>
+                _DispensaScreenState._formatDate(context, date),
           ),
           trailing: const Icon(
             Icons.chevron_right_rounded,
@@ -542,11 +580,13 @@ class _ProductIcon extends StatelessWidget {
 
 class _ProductSubtitle extends StatelessWidget {
   final num price;
+  final ProductCategory category;
   final String? expirationDate;
   final Function(BuildContext, DateTime) formatDate;
 
   const _ProductSubtitle({
     required this.price,
+    required this.category,
     required this.expirationDate,
     required this.formatDate,
   });
@@ -561,6 +601,10 @@ class _ProductSubtitle extends StatelessWidget {
           '€${price.toStringAsFixed(2)}',
           style: const TextStyle(color: AppColors.muted),
         ),
+        Text(
+          strings.productCategory(category),
+          style: const TextStyle(color: AppColors.muted),
+        ),
         if (expirationDate != null)
           Text(
             strings.expirationLabel(
@@ -572,4 +616,3 @@ class _ProductSubtitle extends StatelessWidget {
     );
   }
 }
-
