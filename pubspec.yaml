@@ -21,6 +21,7 @@ dependencies:
   shared_preferences: ^2.5.6
   google_mlkit_text_recognition: ^0.14.0
   image_picker: ^1.2.4
+  workmanager: ^0.10.0
 
 dev_dependencies:
   flutter_test:

@@ -50,6 +50,18 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _updateAutoDeleteExpired(BuildContext context, bool value) async {
+    try {
+      await AppSettings.instance.setAutoDeleteExpiredProducts(value);
+    } catch (error) {
+      if (!context.mounted) return;
+      final strings = AppStrings.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.settingsSaveError(error))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -129,6 +141,36 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
         ),
+        if (!kIsWeb)
+          ...[
+            const SizedBox(height: 16),
+            _SettingsCard(
+              icon: Icons.delete_outline_rounded,
+              title: strings.autoDeleteExpiredProducts,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SwitchListTile(
+                    value: settings.autoDeleteExpiredProducts,
+                    onChanged: (value) {
+                      _updateAutoDeleteExpired(context, value);
+                    },
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(strings.autoDeleteExpiredProducts),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    strings.autoDeleteExpiredProductsDescription,
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
       ],
     );
   }

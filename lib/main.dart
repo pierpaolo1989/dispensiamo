@@ -1,5 +1,6 @@
 import 'package:dispensiamo/service/app_settings.dart';
 import 'package:dispensiamo/service/notification_service.dart';
+import 'package:dispensiamo/service/work_manager_service.dart';
 import 'package:dispensiamo/splash_screen.dart';
 import 'package:dispensiamo/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppSettings.instance.load();
   await NotificationService.instance.initialize();
+  await WorkManagerService.initializeWorkManager();
+  if (AppSettings.instance.autoDeleteExpiredProducts) {
+    await WorkManagerService.scheduleDeleteExpiredProductsTask();
+  }
   runApp(const MyApp());
 }
 

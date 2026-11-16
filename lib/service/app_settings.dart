@@ -1,4 +1,5 @@
 import 'package:dispensiamo/service/database_service.dart';
+import 'package:dispensiamo/service/work_manager_service.dart';
 import 'package:flutter/material.dart';
 
 class AppSettings extends ChangeNotifier {
@@ -8,10 +9,12 @@ class AppSettings extends ChangeNotifier {
 
   String _languageCode = 'it';
   int _defaultExpirationAlertDays = 3;
+  bool _autoDeleteExpiredProducts = false;
 
   String get languageCode => _languageCode;
   Locale get locale => Locale(_languageCode);
   int get defaultExpirationAlertDays => _defaultExpirationAlertDays;
+  bool get autoDeleteExpiredProducts => _autoDeleteExpiredProducts;
 
   Future<void> load() async {
     final savedLanguage = await DatabaseService.getSetting('language');
@@ -23,6 +26,9 @@ class AppSettings extends ChangeNotifier {
         parsedDays != null && parsedDays >= 0 && parsedDays <= 30
             ? parsedDays
             : 3;
+    final savedAutoDelete =
+        await DatabaseService.getSetting('auto_delete_expired');
+    _autoDeleteExpiredProducts = savedAutoDelete == 'true';
   }
 
   Future<void> setLanguageCode(String languageCode) async {
@@ -42,6 +48,21 @@ class AppSettings extends ChangeNotifier {
     if (_defaultExpirationAlertDays == days) return;
     await DatabaseService.setSetting('default_alert_days', '$days');
     _defaultExpirationAlertDays = days;
+    notifyListeners();
+  }
+
+  Future<void> setAutoDeleteExpiredProducts(bool enabled) async {
+    if (_autoDeleteExpiredProducts == enabled) return;
+    await DatabaseService.setSetting(
+      'auto_delete_expired',
+      enabled ? 'true' : 'false',
+    );
+    _autoDeleteExpiredProducts = enabled;
+    if (enabled) {
+      await WorkManagerService.scheduleDeleteExpiredProductsTask();
+    } else {
+      await WorkManagerService.cancelDeleteExpiredProductsTask();
+    }
     notifyListeners();
   }
 }

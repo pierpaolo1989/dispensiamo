@@ -169,6 +169,12 @@ class AppStrings {
   String get reminderPermissionExplanation => _isItalian
       ? 'Il permesso per le notifiche viene richiesto quando attivi un promemoria.'
       : 'Notification permission is requested when you enable a reminder.';
+  String get autoDeleteExpiredProducts => _isItalian
+      ? 'Cancella automaticamente prodotti scaduti'
+      : 'Auto-delete expired products';
+  String get autoDeleteExpiredProductsDescription => _isItalian
+      ? 'Elimina automaticamente i prodotti scaduti una volta al giorno (disponibile solo su Android)'
+      : 'Automatically remove expired products once a day (Android only)';
   String settingsSaveError(Object error) => _isItalian
       ? 'Impossibile aggiornare le impostazioni: $error'
       : 'Could not update settings: $error';

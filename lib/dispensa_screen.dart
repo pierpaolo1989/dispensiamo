@@ -353,39 +353,15 @@ class _DispensaScreenState extends State<DispensaScreen> {
                         final expirationDate =
                             product['expiration_date'] as String?;
                         final productId = product['id'] as String;
-                        return Dismissible(
+                        return _ProductTile(
                           key: ValueKey(productId),
-                          direction: DismissDirection.endToStart,
-                          background: Container(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 5,
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade700,
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            alignment: Alignment.centerRight,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.delete_outline_rounded,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  strings.deleteProduct,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          product: product,
+                          expirationDate: expirationDate,
+                          productId: productId,
+                          onTap: () => _showProductForm(
+                            existingProduct: product,
                           ),
-                          confirmDismiss: (_) async {
+                          onDelete: () async {
                             try {
                               await DatabaseService.deleteProduct(productId);
                             } catch (error) {
@@ -417,78 +393,15 @@ class _DispensaScreenState extends State<DispensaScreen> {
                                 );
                               }
                             }
-                            return true;
-                          },
-                          onDismissed: (_) {
+                            
+                            if (!context.mounted) return true;
                             setState(() {
                               _products.removeWhere(
                                 (item) => item['id'] == productId,
                               );
                             });
+                            return true;
                           },
-                          child: Card(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 5,
-                            ),
-                            color: const Color(0xFFF8F8F5),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 6,
-                              ),
-                              onTap: () => _showProductForm(
-                                existingProduct: product,
-                              ),
-                              leading: Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: AppColors.acidGreen,
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: const Icon(
-                                  Icons.shopping_basket_outlined,
-                                  color: AppColors.black,
-                                ),
-                              ),
-                              title: Text(
-                                product['name'] as String,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '€${(product['price'] as num).toStringAsFixed(2)}',
-                                    style:
-                                        const TextStyle(color: AppColors.muted),
-                                  ),
-                                  if (expirationDate != null)
-                                    Text(
-                                      strings.expirationLabel(
-                                        _formatDate(
-                                          context,
-                                          DateTime.parse(expirationDate),
-                                        ),
-                                      ),
-                                      style: const TextStyle(
-                                        color: AppColors.muted,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              trailing: const Icon(
-                                Icons.chevron_right_rounded,
-                                color: AppColors.muted,
-                              ),
-                            ),
-                          ),
                         );
                       },
                     ),
@@ -500,3 +413,163 @@ class _DispensaScreenState extends State<DispensaScreen> {
     );
   }
 }
+
+class _ProductTile extends StatefulWidget {
+  final Map<String, dynamic> product;
+  final String? expirationDate;
+  final String productId;
+  final VoidCallback onTap;
+  final Future<bool> Function() onDelete;
+
+  const _ProductTile({
+    required super.key,
+    required this.product,
+    required this.expirationDate,
+    required this.productId,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  State<_ProductTile> createState() => _ProductTileState();
+}
+
+class _ProductTileState extends State<_ProductTile>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dismissible(
+      key: widget.key!,
+      direction: DismissDirection.endToStart,
+      background: const _DismissBackground(),
+      confirmDismiss: (_) => widget.onDelete(),
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+        color: const Color(0xFFF8F8F5),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          onTap: widget.onTap,
+          leading: const _ProductIcon(),
+          title: Text(
+            widget.product['name'] as String,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          subtitle: _ProductSubtitle(
+            price: widget.product['price'] as num,
+            expirationDate: widget.expirationDate,
+            formatDate: (context, date) => _DispensaScreenState._formatDate(context, date),
+          ),
+          trailing: const Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.muted,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DismissBackground extends StatelessWidget {
+  const _DismissBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: Colors.red.shade700,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      alignment: Alignment.centerRight,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.delete_outline_rounded, color: Colors.white),
+          const SizedBox(height: 4),
+          Text(
+            strings.deleteProduct,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductIcon extends StatelessWidget {
+  const _ProductIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.acidGreen,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Icon(
+        Icons.shopping_basket_outlined,
+        color: AppColors.black,
+      ),
+    );
+  }
+}
+
+class _ProductSubtitle extends StatelessWidget {
+  final num price;
+  final String? expirationDate;
+  final Function(BuildContext, DateTime) formatDate;
+
+  const _ProductSubtitle({
+    required this.price,
+    required this.expirationDate,
+    required this.formatDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '€${price.toStringAsFixed(2)}',
+          style: const TextStyle(color: AppColors.muted),
+        ),
+        if (expirationDate != null)
+          Text(
+            strings.expirationLabel(
+              formatDate(context, DateTime.parse(expirationDate!)),
+            ),
+            style: const TextStyle(color: AppColors.muted),
+          ),
+      ],
+    );
+  }
+}
+

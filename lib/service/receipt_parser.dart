@@ -121,7 +121,10 @@ class GenericReceiptParser {
   static final _ignoredDescription = RegExp(
     r'\b(?:TOTALE|COMPLESSIVO|PAGAMENTO|CONTANTI|IMPORTO|IVA|DOCUMENTO|'
     r'ARROTONDAMENTI|DESCRIZIONE|PREZZO|DETTAGLIO|SCONTRINO|RESTO|'
-    r'SUBTOTALE|IMPONIBILE|TASSE)\b',
+    r'SUBTOTALE|IMPONIBILE|TASSE|CASH|CARTA|BANCOMAT|ACCONTO|CAPARRA|'
+    r'DEPOSITO|CAUZIONE|PAGATO|DOVUTO|CASSA|REGISTRATORE|TRANSAZIONE|'
+    r'RICEVUTA|FATTURA|NUMERO|DATA|ORA|COMMESSO|REPARTO|AISLE|'
+    r'SERVIZIO|IMBALLAGGIO|CONSEGNA|SPEDIZIONE|GARANZIA|CAMBIO|RESO)\b',
     caseSensitive: false,
   );
   static final _totalMarker = RegExp(
@@ -381,10 +384,19 @@ class GenericReceiptParser {
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
 
-  static bool _isProductDescription(String value) =>
-      value.isNotEmpty &&
-      !_ignoredDescription.hasMatch(value) &&
-      RegExp(r'[A-Za-zÀ-ÖØ-öø-ÿ]').hasMatch(value);
+  static bool _isProductDescription(String value) {
+    if (value.isEmpty) return false;
+    
+    if (_ignoredDescription.hasMatch(value)) return false;
+    
+    if (!RegExp(r'[A-Za-zÀ-ÖØ-öø-ÿ]').hasMatch(value)) return false;
+    
+    if (RegExp(r'^\d+([,\.]\d{2})?$').hasMatch(value)) return false;
+    
+    if (RegExp(r'^\d+\s*%\s*$').hasMatch(value)) return false;
+    
+    return true;
+  }
 
   static void _applyDiscount(
     List<ReceiptProductDraft> products,
