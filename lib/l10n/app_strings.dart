@@ -173,8 +173,8 @@ class AppStrings {
       ? 'Cancella automaticamente prodotti scaduti'
       : 'Auto-delete expired products';
   String get autoDeleteExpiredProductsDescription => _isItalian
-      ? 'Elimina automaticamente i prodotti scaduti una volta al giorno (disponibile solo su Android)'
-      : 'Automatically remove expired products once a day (Android only)';
+      ? 'Elimina automaticamente i prodotti scaduti una volta al giorno'
+      : 'Automatically remove expired products once a day';
   String settingsSaveError(Object error) => _isItalian
       ? 'Impossibile aggiornare le impostazioni: $error'
       : 'Could not update settings: $error';
